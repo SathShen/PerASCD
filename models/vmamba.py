@@ -2479,5 +2479,58 @@ if __name__ == "__main__":
     # do_throughput("vmamba_base_s1l20")
     
 
+from .common import SCDNet
+
+def build_encoder(drop_rate, pretrained_path=None, freeze_backbone=False):
+    encoder = Backbone_VSSM(
+        patch_size=4,
+        in_chans=3,
+        depths=[2, 2, 15, 2],
+        dims=[128, 256, 512, 1024],
+        ssm_d_state=1,
+        ssm_ratio=2.0,
+        ssm_dt_rank="auto",
+        ssm_act_layer="silu",
+        ssm_conv=3,
+        ssm_conv_bias=False,
+        ssm_drop_rate=0.0,
+        ssm_init="v0",
+        forward_type="v05_noz",
+        mlp_ratio=4.0,
+        mlp_act_layer="gelu",
+        mlp_drop_rate=0.0,
+        drop_path_rate=drop_rate,
+        patch_norm=True,
+        norm_layer="ln2d",
+        downsample_version="v3",
+        patchembed_version="v2",
+        use_checkpoint=False,
+        out_indices=(0, 1, 2, 3),
+    )
+
+    ckpt_path = pretrained_path
+    if ckpt_path is not None:
+        checkpoint = torch.load(ckpt_path, map_location="cpu")
+        state_dict = checkpoint["model"] if "model" in checkpoint else checkpoint
+        encoder.load_state_dict(state_dict, strict=False)
+        print(f"VMamba-B checkpoint loaded: {ckpt_path}")
+
+    if freeze_backbone:
+        for p in encoder.parameters():
+            p.requires_grad = False
+        print("VMamba-B backbone is frozen.")
+
+    return encoder
 
 
+def build_model(num_classes, input_size, output_size, drop_rate, pretrained_path=None, freeze_backbone=False):
+    encoder = build_encoder(drop_rate, pretrained_path, freeze_backbone)
+
+    return SCDNet(
+        encoder=encoder,
+        in_channel_list=[128, 256, 512, 1024],
+        num_classes=num_classes,
+        output_size=output_size,
+        drop_rate=drop_rate,
+        out_channels=128,
+    )
