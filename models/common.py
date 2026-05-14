@@ -55,8 +55,10 @@ class ChangeAwareGatingModule(nn.Module):
 
 
 class CascadeGatedBlock(nn.Module):
-    def __init__(self, feat_channels, out_channels, drop_rate=0.0):
+    def __init__(self, feat_channels, out_channels, drop_rate=0.0, use_lateral=True):
         super().__init__()
+
+        self.use_lateral = use_lateral
 
         self.feat_conv0 = nn.Sequential(
             CBAMconv2d(feat_channels, out_channels, kernel_size=3),
@@ -113,17 +115,25 @@ class CascadeGatedBlock(nn.Module):
         self.cagm = ChangeAwareGatingModule(out_channels * 2)
         self.dropout = nn.Dropout2d(p=drop_rate)
 
-    def forward(self, x0, x1, xc, feat0, feat1):
+    def forward(self, x0, x1, xc, feat0=None, feat1=None):
         x0 = self.highconv0(x0)
         x1 = self.highconv1(x1)
         xc = self.highconvc(torch.cat([xc, x0, x1], dim=1))
 
-        x0 = F.interpolate(x0, scale_factor=2, mode="bilinear", align_corners=False)
-        x1 = F.interpolate(x1, scale_factor=2, mode="bilinear", align_corners=False)
-        xc = F.interpolate(xc, scale_factor=2, mode="bilinear", align_corners=False)
+        if self.use_lateral:
+            if feat0 is None or feat1 is None:
+                raise ValueError("use_lateral=True requires feat0 and feat1.")
 
-        f0 = self.feat_conv0(feat0)
-        f1 = self.feat_conv0(feat1)
+            x0 = F.interpolate(x0, scale_factor=2, mode="bilinear", align_corners=False)
+            x1 = F.interpolate(x1, scale_factor=2, mode="bilinear", align_corners=False)
+            xc = F.interpolate(xc, scale_factor=2, mode="bilinear", align_corners=False)
+
+            f0 = self.feat_conv0(feat0)
+            f1 = self.feat_conv0(feat1)
+        else:
+            f0 = self.feat_conv0(x0)
+            f1 = self.feat_conv0(x1)
+
         fc = self.feat_convc(torch.abs(f0 - f1))
 
         hardship_map = self.cagm(torch.cat([xc, fc], dim=1))
@@ -143,8 +153,16 @@ class CascadeGatedBlock(nn.Module):
 
 
 class CascadeGatedDecoder(nn.Module):
-    def __init__(self, in_channel_list, out_channels, drop_rate=0.0):
+    def __init__(
+        self,
+        in_channel_list,
+        out_channels,
+        drop_rate=0.0,
+        use_refinement_block=False,
+    ):
         super().__init__()
+
+        self.use_refinement_block = use_refinement_block
 
         self.first_feat_conv0 = nn.Sequential(
             CBAMconv2d(in_channel_list[-1], out_channels, kernel_size=3),
@@ -152,24 +170,41 @@ class CascadeGatedDecoder(nn.Module):
             nn.ReLU(inplace=True),
         )
 
-        self.blocks = nn.ModuleList([
-            CascadeGatedBlock(
-                in_channel_list[len(in_channel_list) - i - 2],
-                out_channels,
-                drop_rate,
+        fusion_blocks = []
+        for i in range(len(in_channel_list) - 1):
+            fusion_blocks.append(
+                CascadeGatedBlock(
+                    feat_channels=in_channel_list[len(in_channel_list) - i - 2],
+                    out_channels=out_channels,
+                    drop_rate=drop_rate,
+                    use_lateral=True,
+                )
             )
-            for i in range(len(in_channel_list) - 1)
-        ])
+
+        self.fusion_blocks = nn.ModuleList(fusion_blocks)
+
+        if use_refinement_block:
+            self.refinement_block = CascadeGatedBlock(
+                feat_channels=out_channels,
+                out_channels=out_channels,
+                drop_rate=drop_rate,
+                use_lateral=False,
+            )
+        else:
+            self.refinement_block = None
 
     def forward(self, feat_list_a, feat_list_b):
         x0 = self.first_feat_conv0(feat_list_a[-1])
         x1 = self.first_feat_conv0(feat_list_b[-1])
         xc = torch.abs(x0 - x1)
 
-        for i, block in enumerate(self.blocks):
+        for i, block in enumerate(self.fusion_blocks):
             feat0 = feat_list_a[len(feat_list_a) - i - 2]
             feat1 = feat_list_b[len(feat_list_b) - i - 2]
             x0, x1, xc = block(x0, x1, xc, feat0, feat1)
+
+        if self.refinement_block is not None:
+            x0, x1, xc = self.refinement_block(x0, x1, xc)
 
         return x0, x1, xc
 

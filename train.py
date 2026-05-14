@@ -40,7 +40,6 @@ def parse_args():
     parser.add_argument("--output-size", type=int, default=512, help="Final output prediction size.")
     parser.add_argument("--num-workers", type=int, default=16, help="Number of dataloader workers.")
     parser.add_argument("--norm-profile", type=str, default="auto", choices=["auto", "imagenet", "pera"], help="Normalization profile. 'auto' selects normalization based on encoder.")
-    parser.add_argument("--augment-style", type=str, default="legacy", choices=["legacy", "torchvision", "none"], help="Data augmentation style.")
 
     # Training
     parser.add_argument("--epochs", type=int, default=50, help="Total training epochs.")
@@ -65,10 +64,9 @@ def parse_args():
     parser.add_argument("--note", type=str, default="", help="Extra note appended to log directory name.")
 
     # Hardware
-    parser.add_argument("--gpu", type=str, default="1", help="CUDA_VISIBLE_DEVICES value.")
+    parser.add_argument("--gpu", type=str, default="0", help="CUDA_VISIBLE_DEVICES value.")
 
     # Dataloader
-    parser.add_argument("--no-persistent-workers", action="store_true", help="Disable persistent workers in dataloader.")
     parser.add_argument("--prefetch-factor", type=int, default=4, help="Prefetch factor for dataloader workers.")
 
     return parser.parse_args()
@@ -147,7 +145,6 @@ def build_loaders(args):
         dataset_name=args.data_name,
         encoder=args.encoder,
         norm_profile=args.norm_profile,
-        augment_style=args.augment_style,
     )
 
     val_set = SCDDataset(
@@ -156,10 +153,8 @@ def build_loaders(args):
         dataset_name=args.data_name,
         encoder=args.encoder,
         norm_profile=args.norm_profile,
-        augment_style="none",
     )
 
-    persistent_workers = args.num_workers > 0 and not args.no_persistent_workers
     prefetch_factor = args.prefetch_factor if args.num_workers > 0 else None
 
     train_loader = DataLoader(
@@ -169,7 +164,7 @@ def build_loaders(args):
         num_workers=args.num_workers,
         pin_memory=True,
         drop_last=True,
-        persistent_workers=persistent_workers,
+        persistent_workers=True,
         prefetch_factor=prefetch_factor,
     )
 
@@ -180,7 +175,7 @@ def build_loaders(args):
         num_workers=args.num_workers,
         pin_memory=True,
         drop_last=False,
-        persistent_workers=persistent_workers,
+        persistent_workers=True,
         prefetch_factor=prefetch_factor,
     )
 
@@ -219,7 +214,9 @@ def train_one_epoch(args, train_loader, net, criterion, criterion_sc, optimizer,
             loss_seg = criterion(outputs_a, labels_a) + criterion(outputs_b, labels_b)
             loss_bn = weighted_BCE_logits(out_change, labels_bn)
             loss_sc = criterion_sc(outputs_a[:, 1:], outputs_b[:, 1:], labels_bn)
-            loss = (loss_seg * 0.5 + loss_bn + loss_sc) / args.grad_accum_steps
+            loss = (loss_seg * 0.5 + loss_bn + loss_sc)
+            if args.grad_accum_steps > 1:
+                loss /= args.grad_accum_steps
 
         scaler.scale(loss).backward()
 
@@ -250,10 +247,10 @@ def validate(args, val_loader, net, criterion):
 
     for data in tqdm(val_loader, ncols=80):
         imgs_a, imgs_b, labels_a, labels_b, _ = data
-        imgs_a = imgs_a.cuda(non_blocking=True).float()
-        imgs_b = imgs_b.cuda(non_blocking=True).float()
-        labels_a = labels_a.cuda(non_blocking=True).long()
-        labels_b = labels_b.cuda(non_blocking=True).long()
+        imgs_a = imgs_a.cuda().float()
+        imgs_b = imgs_b.cuda().float()
+        labels_a = labels_a.cuda().long()
+        labels_b = labels_b.cuda().long()
 
         with torch.no_grad():
             out_change, outputs_a, outputs_b = net(imgs_a, imgs_b)
@@ -315,7 +312,7 @@ def main():
         lr=args.lr,
         weight_decay=args.weight_decay,
         momentum=args.momentum,
-        nesterov=True,
+        nesterov=True
     )
 
     curr_epoch = 0
