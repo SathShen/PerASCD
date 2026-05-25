@@ -482,7 +482,6 @@ class SCDDataset(Dataset):
             raise RuntimeError(f"No images found in {self.img_a_dir}")
 
         norm = get_norm_profile(norm_profile, encoder)
-        print(norm)
 
         if mode == "train":
             self.transform = CDMCompose([

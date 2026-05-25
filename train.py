@@ -1,3 +1,5 @@
+import os
+os.environ["CUDA_VISIBLE_DEVICES"] = "2"
 import argparse
 import importlib
 import os
@@ -63,9 +65,6 @@ def parse_args():
     parser.add_argument("--log-root", type=str, default="./logs", help="Root directory for logs and checkpoints.")
     parser.add_argument("--note", type=str, default="", help="Extra note appended to log directory name.")
 
-    # Hardware
-    parser.add_argument("--gpu", type=str, default="0", help="CUDA_VISIBLE_DEVICES value.")
-
     # Dataloader
     parser.add_argument("--prefetch-factor", type=int, default=4, help="Prefetch factor for dataloader workers.")
 
@@ -91,11 +90,11 @@ def build_model(args):
 
 def amp_context(args):
     if args.amp_dtype in ["none", "fp32"]:
-        return autocast(enabled=False)
+        return torch.float32
     if args.amp_dtype == "bf16":
-        return autocast(dtype=torch.bfloat16)
+        return torch.bfloat16
     if args.amp_dtype == "fp16":
-        return autocast(dtype=torch.float16)
+        return torch.float16
     raise ValueError(f"Unsupported amp_dtype: {args.amp_dtype}")
 
 
@@ -209,7 +208,7 @@ def train_one_epoch(args, train_loader, net, criterion, criterion_sc, optimizer,
         labels_a = labels_a.cuda(non_blocking=True).long()
         labels_b = labels_b.cuda(non_blocking=True).long()
 
-        with amp_context(args):
+        with autocast(dtype=amp_context(args)):
             out_change, outputs_a, outputs_b = net(imgs_a, imgs_b)
             loss_seg = criterion(outputs_a, labels_a) + criterion(outputs_b, labels_b)
             loss_bn = weighted_BCE_logits(out_change, labels_bn)
@@ -256,13 +255,13 @@ def validate(args, val_loader, net, criterion):
             out_change, outputs_a, outputs_b = net(imgs_a, imgs_b)
             loss = 0.5 * criterion(outputs_a, labels_a) + 0.5 * criterion(outputs_b, labels_b)
 
-        val_loss.update(loss.detach().float().cpu().numpy())
+        val_loss.update(loss.cpu().detach().numpy())
 
-        labels_a_np = labels_a.cpu().numpy()
-        labels_b_np = labels_b.cpu().numpy()
-        outputs_a_cpu = outputs_a.detach().cpu()
-        outputs_b_cpu = outputs_b.detach().cpu()
-        change_mask = torch.sigmoid(out_change).detach().cpu() > 0.5
+        labels_a_np = labels_a.cpu().detach().numpy()
+        labels_b_np = labels_b.cpu().detach().numpy()
+        outputs_a_cpu = outputs_a.cpu().detach()
+        outputs_b_cpu = outputs_b.cpu().detach()
+        change_mask = torch.sigmoid(out_change).cpu().detach() > 0.5
 
         preds_a = torch.argmax(outputs_a_cpu, dim=1)
         preds_b = torch.argmax(outputs_b_cpu, dim=1)
@@ -290,7 +289,7 @@ def main():
     for k, v in vars(args).items():
         print(f"{k:>24}: {v}")
     print("=" * 80)
-    set_visible_gpu(args.gpu)
+    # set_visible_gpu(args.gpu)
     set_seed(args.seed, is_benchmark=True)
 
     log_dir = make_log_dir(args)
@@ -320,7 +319,7 @@ def main():
     if args.load_path is not None:
         net, optimizer, curr_epoch, best_fscd = resume_ckpt(net, optimizer, args.load_path)
 
-    scaler = GradScaler(enabled=args.amp_dtype in ["fp16", "bf16"])
+    scaler = GradScaler()
     begin_time = time.time()
     all_iters = float(len(train_loader) * args.epochs)
     best_acc = 0.0
