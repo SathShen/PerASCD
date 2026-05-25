@@ -18,3 +18,4 @@ logs/SECOND/pera/260525111650_peraRefine/pera_25e_mIoU74.04_Sek25.41_Fscd65.83_O
 logs/SECOND/pera/260525111650_peraRefine/pera_30e_mIoU74.28_Sek25.80_Fscd66.19_OA88.58.pth
 logs/SECOND/pera/260525111650_peraRefine/pera_32e_mIoU74.28_Sek25.88_Fscd66.30_OA88.55.pth
 logs
+.gitignore
