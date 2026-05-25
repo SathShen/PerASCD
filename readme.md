@@ -12,7 +12,7 @@
   <a href="#"><img src="https://img.shields.io/badge/License-MIT-green"></a>
 </p>
 
-> Official implementation of **PerASCD**, a semantic change detection framework with a plug-and-play encoder interface and a cascade gated decoder. See paper for more details: [Foundation Model-Driven Semantic Change Detection in Remote Sensing Imagery](https://arxiv.org/abs/2602.13780).
+> Official implementation of **PerASCD**, a semantic change detection framework with a plug-and-play encoder interface and a **Cascade Gated Decoder (CG-Decoder)**. See paper for more details: [Foundation Model-Driven Semantic Change Detection in Remote Sensing Imagery](https://arxiv.org/abs/2602.13780).
 
 ---
 
@@ -88,8 +88,8 @@ We provide processed datasets with single-channel `uint8` index labels.
 
 | Dataset | Download |
 |---|---|
-| SECOND | [Download](YOUR_SECOND_DATASET_LINK) |
-| LandsatSCD | [Download](YOUR_LANDSAT_SCD_DATASET_LINK) |
+| SECOND | [Download](https://pan.baidu.com/s/1u1bN2miO__nbNR7cUy14uw?pwd=rhgj) |
+| LandsatSCD | [Download](https://pan.baidu.com/s/1zdbS4AHDpPTnWM5RqpVz4A?pwd=fkrn) |
 
 Expected directory structure:
 
@@ -144,6 +144,8 @@ CUDA_VISIBLE_DEVICES=0 python train.py \
   --train-batch-size 8 \
   --val-batch-size 8 \
   --grad-accum-steps 1 \
+  --input-size 512
+  --amp-dtype fp32  # Use fp32 for robust training.
   --note vmamba_second
 ```
 
@@ -251,43 +253,6 @@ pera_22e_mIoU86.59_Sek53.83_Fscd86.43_OA95.21.pth
 ```
 
 ---
-
-## Results
-
-### SECOND
-
-| Method | Backbone | mIoU | Sek | Fscd | OA | Checkpoint |
-|---|---|---:|---:|---:|---:|---|
-| ResNet50 + CG-Decoder | ResNet50 | XX.XX | XX.XX | XX.XX | XX.XX | [Download](YOUR_SECOND_RESNET50_CKPT_LINK) |
-| SwinV2-L + CG-Decoder | SwinV2-L | XX.XX | XX.XX | XX.XX | XX.XX | [Download](YOUR_SECOND_SWINV2L_CKPT_LINK) |
-| VMamba-B + CG-Decoder | VMamba-B | XX.XX | XX.XX | XX.XX | XX.XX | [Download](YOUR_SECOND_VMAMBAB_CKPT_LINK) |
-| **PerASCD** | PerA / DINOv2-G | **XX.XX** | **XX.XX** | **XX.XX** | **XX.XX** | [Download](YOUR_SECOND_PERASCD_CKPT_LINK) |
-
-### LandsatSCD
-
-| Method | Backbone | mIoU | Sek | Fscd | OA | Checkpoint |
-|---|---|---:|---:|---:|---:|---|
-| ResNet50 + CG-Decoder | ResNet50 | XX.XX | XX.XX | XX.XX | XX.XX | [Download](YOUR_LANDSAT_RESNET50_CKPT_LINK) |
-| SwinV2-L + CG-Decoder | SwinV2-L | XX.XX | XX.XX | XX.XX | XX.XX | [Download](YOUR_LANDSAT_SWINV2L_CKPT_LINK) |
-| VMamba-B + CG-Decoder | VMamba-B | XX.XX | XX.XX | XX.XX | XX.XX | [Download](YOUR_LANDSAT_VMAMBAB_CKPT_LINK) |
-| **PerASCD** | PerA / DINOv2-G | **XX.XX** | **XX.XX** | **XX.XX** | **XX.XX** | [Download](YOUR_LANDSAT_PERASCD_CKPT_LINK) |
-
----
-
-## Citation
-
-If this work is useful for your research, please consider citing:
-
-```bibtex
-@article{your2026perascd,
-  title   = {PerASCD: A Plug-and-Play Framework for Semantic Change Detection},
-  author  = {Your Name and Coauthors},
-  journal = {XXX},
-  year    = {2026}
-}
-```
----
-
 
 ## License
 

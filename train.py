@@ -146,7 +146,7 @@ def build_loaders(args):
 
     val_set = SCDDataset(
         root=args.data_path,
-        mode="test",
+        mode="val",
         dataset_name=args.data_name,
         encoder=args.encoder,
         norm_profile=args.norm_profile,
