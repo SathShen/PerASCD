@@ -238,18 +238,56 @@ For example, if your custom encoder is pretrained with ImageNet statistics, use:
 
 ## Evaluation
 
-Validation is automatically performed after each training epoch.
+Validation is automatically performed after each training epoch. The best checkpoint is saved according to the validation `Fscd` score.
 
-The checkpoint name contains the main metrics:
+The checkpoint filename contains the main validation metrics:
 
 ```text
 encoder_XXe_mIoUXX.XX_SekXX.XX_FscdXX.XX_OAXX.XX.pth
 ```
 
-Example:
+To evaluate a trained checkpoint, run:
+
+```bash
+CUDA_VISIBLE_DEVICES=0 python evaluate.py \
+  --encoder pera \
+  --data-name SECOND \
+  --data-path /path/to/SECOND \
+  --split test \
+  --input-size 448 \
+  --output-size 512 \
+  --norm-profile pera \
+  --val-batch-size 1 \
+  --load-path /path/to/checkpoint.pth \
+  --out-dir /path/to/eval_output \
+  --save-preds \
+  --gen-conf-matrix
+```
+
+For ImageNet-pretrained backbones such as `ResNet50`, `VMamba-B`, or `SwinV2-L`, use:
+
+```bash
+--norm-profile imagenet
+```
+
+If `--save-preds` is enabled, prediction maps will be saved under:
 
 ```text
-pera_22e_mIoU86.59_Sek53.83_Fscd86.43_OA95.21.pth
+out_dir/pred/
+```
+
+including:
+
+```text
+predA
+predB
+changemask
+```
+---
+
+## Legacy Implementation
+```text
+Paper results and the corresponding checkpoints are released with the legacy implementation. Please use the `legacy` branch to reproduce the reported results and load the paper checkpoints. The current main codebase is a refactored plug-and-play version and is not directly compatible with legacy checkpoints because the model wrapper and `state_dict` key names have changed.
 ```
 
 ---
@@ -265,6 +303,6 @@ This project is released under the `MIT License`.
 For questions or suggestions, please contact:
 
 ```text
-Your Name
-your.email@example.com
+HengtongShen
+shenht@whu.edu.cn or sathshen@163.com
 ```
