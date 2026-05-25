@@ -144,8 +144,8 @@ CUDA_VISIBLE_DEVICES=0 python train.py \
   --train-batch-size 8 \
   --val-batch-size 8 \
   --grad-accum-steps 1 \
-  --input-size 512
-  --amp-dtype fp32  # Use fp32 for robust training.
+  --input-size 512 \
+  --amp-dtype fp32 \
   --note vmamba_second
 ```
 
