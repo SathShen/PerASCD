@@ -47,4 +47,5 @@ def build_model(num_classes, input_size, output_size, drop_rate, pretrained_path
         drop_rate=drop_rate,
         out_channels=128,
         channel_last=True,
+        use_refinement_block=True,
     )

@@ -1,11 +1,11 @@
-# PerASCD: Plug-and-Play Semantic Change Detection Framework
+# PerASCD: Foundation Model-Driven Semantic Change Detection in Remote Sensing Imagery
 
 <p align="center">
   <img src="assets/Arch.png" width="85%">
 </p>
 
 <p align="center">
-  <a href="https://arxiv.org/abs/2602.13780"><img src="https://img.shields.io/badge/Paper-PDF-red?logo=adobeacrobatreader&logoColor=white"></a>
+  <a href="https://arxiv.org/abs/2602.13780"><img src="https://img.shields.io/badge/Paper-arXiv-red?logo=adobeacrobatreader&logoColor=white"></a>
   <a href="#"><img src="https://img.shields.io/badge/PyTorch-2.2+-ee4c2c?logo=pytorch&logoColor=white"></a>
   <a href="#"><img src="https://img.shields.io/badge/CUDA-12.1-76b900?logo=nvidia&logoColor=white"></a>
   <a href="#"><img src="https://img.shields.io/badge/Task-Semantic%20Change%20Detection-blue"></a>
@@ -37,7 +37,7 @@ This repository provides:
 
 ---
 
-## Framework
+## Plug-and-Play Semantic Change Detection Framework
 
 The proposed **Cascade Gated Decoder (CG-Decoder)** is designed for semantic change detection with plug-and-play multi-scale encoders. It progressively integrates hierarchical semantic features from deep to shallow stages while explicitly modeling semantic changes between bi-temporal inputs.
 
@@ -48,7 +48,7 @@ The proposed **Cascade Gated Decoder (CG-Decoder)** is designed for semantic cha
 Each **CG-Decoder Block** progressively refines bi-temporal semantic features and change features by combining deep decoded representations with shallower encoder features through feature compression, difference modeling, and change-aware gated fusion.
 
 <p align="center">
-  <img src="assets/DecoderBlock - EN.png.png" width="85%">
+  <img src="assets/DecoderBlock.png" width="85%">
 </p>
 
 ---

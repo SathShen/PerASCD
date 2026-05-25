@@ -29,7 +29,7 @@ def parse_args():
     parser = argparse.ArgumentParser(description="Unified Semantic Change Detection training script.")
 
     # Model / Encoder
-    parser.add_argument("--encoder", type=str, default="vmambaB", choices=list(ENCODER_REGISTRY.keys()), help="Encoder backbone name.")
+    parser.add_argument("--encoder", type=str, default="PerA", choices=list(ENCODER_REGISTRY.keys()), help="Encoder backbone name.")
     parser.add_argument("--pretrained-path", type=str, default=None, help="Path to pretrained backbone weights.")
     parser.add_argument("--freeze-backbone", action="store_true", help="Freeze encoder backbone during training.")
 
