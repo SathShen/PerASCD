@@ -96,4 +96,5 @@ def build_model(
         drop_rate=drop_rate,
         out_channels=128,
         channel_last=False,
+        use_refinement_block=True,
     )

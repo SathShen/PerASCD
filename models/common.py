@@ -219,6 +219,7 @@ class SCDNet(nn.Module):
         drop_rate=0.0,
         out_channels=256,
         channel_last=False,
+        use_refinement_block=False,
     ):
         super().__init__()
 
@@ -226,7 +227,7 @@ class SCDNet(nn.Module):
         self.output_size = output_size
         self.channel_last = channel_last
 
-        self.decoder = CascadeGatedDecoder(in_channel_list, out_channels, drop_rate)
+        self.decoder = CascadeGatedDecoder(in_channel_list, out_channels, drop_rate, use_refinement_block)
         self.classifier_a = nn.Conv2d(out_channels, num_classes, kernel_size=1)
         self.classifier_b = nn.Conv2d(out_channels, num_classes, kernel_size=1)
         self.classifier_cd = nn.Sequential(

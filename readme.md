@@ -1,25 +1,25 @@
 # PerASCD: Plug-and-Play Semantic Change Detection Framework
 
 <p align="center">
-  <img src="assets/overview.png" width="85%">
+  <img src="assets/Arch.png" width="85%">
 </p>
 
 <p align="center">
+  <a href="https://arxiv.org/abs/2602.13780"><img src="https://img.shields.io/badge/Paper-PDF-red?logo=adobeacrobatreader&logoColor=white"></a>
   <a href="#"><img src="https://img.shields.io/badge/PyTorch-2.2+-ee4c2c?logo=pytorch&logoColor=white"></a>
   <a href="#"><img src="https://img.shields.io/badge/CUDA-12.1-76b900?logo=nvidia&logoColor=white"></a>
   <a href="#"><img src="https://img.shields.io/badge/Task-Semantic%20Change%20Detection-blue"></a>
   <a href="#"><img src="https://img.shields.io/badge/License-MIT-green"></a>
 </p>
 
-> Official implementation of **PerASCD**, a semantic change detection framework with a plug-and-play encoder interface and a cascade gated decoder.
+> Official implementation of **PerASCD**, a semantic change detection framework with a plug-and-play encoder interface and a cascade gated decoder. See paper for more details: [Foundation Model-Driven Semantic Change Detection in Remote Sensing Imagery](https://arxiv.org/abs/2602.13780).
 
 ---
 
 ## News
 
-- `[YYYY-MM-DD]` Code released.
-- `[YYYY-MM-DD]` Pretrained models and checkpoints released.
-- `[YYYY-MM-DD]` Paper accepted / submitted to `XXX`.
+- `[25 May 2026]` Code released.
+- `[14 Feb 2026]` Paper uploaded to arXiv.
 
 ---
 
@@ -39,49 +39,17 @@ This repository provides:
 
 ## Framework
 
+The proposed **Cascade Gated Decoder (CG-Decoder)** is designed for semantic change detection with plug-and-play multi-scale encoders. It progressively integrates hierarchical semantic features from deep to shallow stages while explicitly modeling semantic changes between bi-temporal inputs.
+
 <p align="center">
-  <img src="assets/framework.png" width="95%">
+  <img src="assets/fig1_3.png" width="85%">
 </p>
 
-The model follows a bi-temporal architecture:
+Each **CG-Decoder Block** progressively refines bi-temporal semantic features and change features by combining deep decoded representations with shallower encoder features through feature compression, difference modeling, and change-aware gated fusion.
 
-```text
-Image A ── Encoder ──┐
-                     ├── Cascade Gated Decoder ── Semantic Map A
-Image B ── Encoder ──┘                         └── Semantic Map B
-                                                └── Binary Change Map
-```
-
-The decoder contains multi-scale fusion blocks and an optional refinement block:
-
-```text
-F4 → fuse F3 → fuse F2 → fuse F1 → optional refinement → prediction
-```
-
----
-
-## Project Structure
-
-```text
-PerASCD/
-├── datasets/
-│   ├── dataset.py              # Dataset and augmentation
-│   └── RS_ST.py                # Legacy dataset implementation
-├── models/
-│   ├── common.py               # Shared decoder and SCDNet wrapper
-│   ├── pera.py                 # PerA / DINOv2-G encoder
-│   ├── vmamba.py               # VMamba-B encoder
-│   ├── swin.py                 # SwinV2-L encoder
-│   ├── resnet.py               # ResNet50 encoder
-│   └── pera_layers/            # PerA / ViT-Adapter modules
-├── utils/
-│   ├── loss.py                 # Loss functions
-│   ├── metrics.py              # Evaluation metrics
-│   └── seed.py                 # Random seed control
-├── train.py                    # Unified training script
-├── requirements.txt
-└── README.md
-```
+<p align="center">
+  <img src="assets/DecoderBlock - EN.png.png" width="85%">
+</p>
 
 ---
 
@@ -94,21 +62,17 @@ conda create -n perascd python=3.10 -y
 conda activate perascd
 ```
 
-### 2. Install PyTorch
-
-```bash
-pip install torch==2.2.0 torchvision==0.17.0 torchaudio==2.2.0 --index-url https://download.pytorch.org/whl/cu121
-```
-
-### 3. Install dependencies
+### 2. Install dependencies
 
 ```bash
 pip install -r requirements.txt
 ```
 
-### 4. Build custom CUDA ops
+### 3. Build custom CUDA ops for PerA / ViT-Adapter
+This step is only required if you want to use the `PerA` encoder.  
+If you only use other backbones such as `ResNet50`, `VMamba-B`, or `SwinV2-L`, you can skip this step.
 
-For PerA / ViT-Adapter, build `MultiScaleDeformableAttention`:
+Build `MultiScaleDeformableAttention`:
 
 ```bash
 cd models/pera_layers/vit_adapter_layers/ops
@@ -116,47 +80,16 @@ sh make.sh
 cd -
 ```
 
-For RTX 4090 / 4090D, manually specify CUDA architecture when needed:
-
-```bash
-export TORCH_CUDA_ARCH_LIST="8.9"
-```
-
-Then rebuild the CUDA ops.
-
----
-
-## Environment Notes
-
-Recommended environment:
-
-```text
-Python        3.10
-PyTorch       2.2.0 + cu121
-torchvision   0.17.0
-CUDA Toolkit  12.1
-xFormers      0.0.24
-mamba-ssm     2.2.4
-```
-
-Before running experiments, avoid system CUDA/cuDNN conflicts:
-
-```bash
-unset LD_LIBRARY_PATH
-export CUDA_VISIBLE_DEVICES=0
-```
-
-or directly:
-
-```bash
-LD_LIBRARY_PATH="" CUDA_VISIBLE_DEVICES=0 python train.py
-```
-
 ---
 
 ## Dataset Preparation
 
-### SECOND
+We provide processed datasets with single-channel `uint8` index labels.
+
+| Dataset | Download |
+|---|---|
+| SECOND | [Download](YOUR_SECOND_DATASET_LINK) |
+| LandsatSCD | [Download](YOUR_LANDSAT_SCD_DATASET_LINK) |
 
 Expected directory structure:
 
@@ -167,12 +100,14 @@ SECOND/
 │   ├── im2/
 │   ├── label1/
 │   └── label2/
-└── test/
+└── val/
     ├── im1/
     ├── im2/
     ├── label1/
     └── label2/
 ```
+
+For other datasets, the structure is similar, but the directory structure should be consistent.
 
 Each label should be a single-channel `uint8` index map:
 
@@ -180,160 +115,41 @@ Each label should be a single-channel `uint8` index map:
 0: unchanged / ignored
 1~N: semantic classes
 ```
-
-### LandsatSCD
-
-Expected directory structure:
-
-```text
-LandsatSCD/
-├── train/
-│   ├── im1/
-│   ├── im2/
-│   ├── label1/
-│   └── label2/
-└── test/
-    ├── im1/
-    ├── im2/
-    ├── label1/
-    └── label2/
-```
-
 ---
 
 ## Training
 
-### Train PerA / DINOv2-G backbone
+### Train PerASCD (PerA backbone + CG-Decoder)
 
 ```bash
 CUDA_VISIBLE_DEVICES=0 python train.py \
   --encoder pera \
+  --pretrained-path /path/to/pera_pretrained.params \
   --data-name SECOND \
   --data-path /path/to/SECOND \
-  --input-size 448 \
-  --output-size 512 \
   --train-batch-size 4 \
   --val-batch-size 4 \
   --grad-accum-steps 2 \
-  --lr 0.1 \
-  --drop-rate 0.3 \
-  --norm-profile pera \
-  --pretrained-path /path/to/pera_pretrained.params \
   --note pera_second
 ```
 
-### Train VMamba-B backbone
+### Train VMamba-B backbone + CG-Decoder
 
 ```bash
 CUDA_VISIBLE_DEVICES=0 python train.py \
   --encoder vmambaB \
+  --pretrained-path /path/to/vmamba_base.pth \
   --data-name SECOND \
   --data-path /path/to/SECOND \
-  --input-size 512 \
-  --output-size 512 \
   --train-batch-size 8 \
   --val-batch-size 8 \
   --grad-accum-steps 1 \
-  --lr 0.1 \
-  --drop-rate 0.3 \
-  --norm-profile imagenet \
-  --pretrained-path /path/to/vmamba_base.pth \
   --note vmamba_second
 ```
 
-### Train SwinV2-L backbone
+Other backbones can be used by replacing `--encoder` with the appropriate name.
 
-```bash
-CUDA_VISIBLE_DEVICES=0 python train.py \
-  --encoder swinV2L \
-  --data-name SECOND \
-  --data-path /path/to/SECOND \
-  --input-size 512 \
-  --output-size 512 \
-  --train-batch-size 4 \
-  --val-batch-size 4 \
-  --grad-accum-steps 2 \
-  --lr 0.1 \
-  --drop-rate 0.3 \
-  --norm-profile imagenet \
-  --pretrained-path /path/to/swinv2_large.safetensors \
-  --note swin_second
-```
-
-### Train ResNet50 backbone
-
-```bash
-CUDA_VISIBLE_DEVICES=0 python train.py \
-  --encoder resnet50 \
-  --data-name SECOND \
-  --data-path /path/to/SECOND \
-  --input-size 512 \
-  --output-size 512 \
-  --train-batch-size 8 \
-  --val-batch-size 8 \
-  --grad-accum-steps 1 \
-  --lr 0.1 \
-  --drop-rate 0.3 \
-  --norm-profile imagenet \
-  --note resnet_second
-```
-
----
-
-## Evaluation
-
-Validation is automatically performed after each training epoch.
-
-The checkpoint name contains the main metrics:
-
-```text
-encoder_XXe_mIoUXX.XX_SekXX.XX_FscdXX.XX_OAXX.XX.pth
-```
-
-Example:
-
-```text
-pera_22e_mIoU86.59_Sek53.83_Fscd86.43_OA95.21.pth
-```
-
----
-
-## Results
-
-### SECOND
-
-| Method | Backbone | mIoU | Sek | Fscd | OA |
-|---|---|---:|---:|---:|---:|
-| ResNet50 + CG-Decoder | ResNet50 | XX.XX | XX.XX | XX.XX | XX.XX |
-| SwinV2-L + CG-Decoder | SwinV2-L | XX.XX | XX.XX | XX.XX | XX.XX |
-| VMamba-B + CG-Decoder | VMamba-B | XX.XX | XX.XX | XX.XX | XX.XX |
-| **PerASCD** | PerA / DINOv2-G | **XX.XX** | **XX.XX** | **XX.XX** | **XX.XX** |
-
-### LandsatSCD
-
-| Method | Backbone | mIoU | Sek | Fscd | OA |
-|---|---|---:|---:|---:|---:|
-| ResNet50 + CG-Decoder | ResNet50 | XX.XX | XX.XX | XX.XX | XX.XX |
-| SwinV2-L + CG-Decoder | SwinV2-L | XX.XX | XX.XX | XX.XX | XX.XX |
-| VMamba-B + CG-Decoder | VMamba-B | XX.XX | XX.XX | XX.XX | XX.XX |
-| **PerASCD** | PerA / DINOv2-G | **XX.XX** | **XX.XX** | **XX.XX** | **XX.XX** |
-
----
-
-## Ablation Study
-
-| Variant | mIoU | Sek | Fscd | OA |
-|---|---:|---:|---:|---:|
-| Full model | XX.XX | XX.XX | XX.XX | XX.XX |
-| w/o CAGM | XX.XX | XX.XX | XX.XX | XX.XX |
-| w/o SSCLoss | XX.XX | XX.XX | XX.XX | XX.XX |
-| w/o refinement block | XX.XX | XX.XX | XX.XX | XX.XX |
-| Decoder dim = 128 | XX.XX | XX.XX | XX.XX | XX.XX |
-| Decoder dim = 256 | XX.XX | XX.XX | XX.XX | XX.XX |
-
----
-
-## Custom Encoder
+### Custom Encoder
 
 To add a new encoder, create a new file under `models/`, for example:
 
@@ -344,16 +160,16 @@ models/my_encoder.py
 Each encoder file should implement:
 
 ```python
-def build_model(
-    num_classes,
-    input_size,
-    output_size,
-    drop_rate,
-    pretrained_path=None,
-    freeze_backbone=False,
-):
-    ...
-    return model
+def build_model(num_classes, input_size, output_size, drop_rate, pretrained_path=None, freeze_backbone=False):
+    encoder = build_encoder(drop_rate, pretrained_path, freeze_backbone)  # Your encoder implementation here
+    return SCDNet(
+        encoder=encoder,
+        in_channel_list=[128, 256, 512, 1024],
+        num_classes=num_classes,
+        output_size=output_size,
+        drop_rate=drop_rate,
+        out_channels=128,
+    )
 ```
 
 The encoder should output a list of multi-scale features:
@@ -383,90 +199,78 @@ ENCODER_REGISTRY = {
 }
 ```
 
+Do not forget to set the correct normalization profile for your encoder in `utils/dataset.py`.  
+Different pretrained encoders may require different input normalization statistics.
+
+```python
+NORM_PROFILES = {
+    "imagenet": {
+        "mean": (0.485, 0.456, 0.406),
+        "std": (0.229, 0.224, 0.225),
+    },
+    "pera": {
+        "mean": (0.3585, 0.3741, 0.3155),
+        "std": (0.1483, 0.1283, 0.1198),
+    },
+}
+```
+
+Then update the encoder-to-normalization mapping:
+
+```python
+ENCODER_TO_NORM = {
+    "pera": "pera",
+    "vmambaB": "imagenet",
+    "resnet50": "imagenet",
+    "swinV2L": "imagenet",
+    "myEncoder": "imagenet",  # Change this if your encoder uses another normalization profile.
+}
+```
+
+For example, if your custom encoder is pretrained with ImageNet statistics, use:
+
+```bash
+--norm-profile imagenet
+```
 ---
 
-## Reproducibility
+## Evaluation
 
-To improve reproducibility, we recommend fixing the software environment, GPU, and random seed:
+Validation is automatically performed after each training epoch.
 
-```bash
-unset LD_LIBRARY_PATH
-export CUDA_VISIBLE_DEVICES=0
-python train.py --seed 3701 ...
+The checkpoint name contains the main metrics:
+
+```text
+encoder_XXe_mIoUXX.XX_SekXX.XX_FscdXX.XX_OAXX.XX.pth
 ```
 
-Exact bitwise reproducibility is not guaranteed due to CUDA, cuDNN, AMP, TensorCore, and multi-worker dataloader nondeterminism. We recommend reporting results from the same software and hardware environment.
+Example:
+
+```text
+pera_22e_mIoU86.59_Sek53.83_Fscd86.43_OA95.21.pth
+```
 
 ---
 
-## Troubleshooting
+## Results
 
-### 1. cuDNN library mismatch
+### SECOND
 
-Error:
+| Method | Backbone | mIoU | Sek | Fscd | OA | Checkpoint |
+|---|---|---:|---:|---:|---:|---|
+| ResNet50 + CG-Decoder | ResNet50 | XX.XX | XX.XX | XX.XX | XX.XX | [Download](YOUR_SECOND_RESNET50_CKPT_LINK) |
+| SwinV2-L + CG-Decoder | SwinV2-L | XX.XX | XX.XX | XX.XX | XX.XX | [Download](YOUR_SECOND_SWINV2L_CKPT_LINK) |
+| VMamba-B + CG-Decoder | VMamba-B | XX.XX | XX.XX | XX.XX | XX.XX | [Download](YOUR_SECOND_VMAMBAB_CKPT_LINK) |
+| **PerASCD** | PerA / DINOv2-G | **XX.XX** | **XX.XX** | **XX.XX** | **XX.XX** | [Download](YOUR_SECOND_PERASCD_CKPT_LINK) |
 
-```text
-Could not load library libcudnn_cnn_train.so.8
-undefined symbol ... libcudnn_cnn_infer.so.8
-```
+### LandsatSCD
 
-Solution:
-
-```bash
-unset LD_LIBRARY_PATH
-CUDA_VISIBLE_DEVICES=0 python train.py ...
-```
-
-or:
-
-```bash
-LD_LIBRARY_PATH="" CUDA_VISIBLE_DEVICES=0 python train.py ...
-```
-
-### 2. MultiScaleDeformableAttention not found
-
-Error:
-
-```text
-ModuleNotFoundError: No module named 'MultiScaleDeformableAttention'
-```
-
-Solution:
-
-```bash
-cd models/pera_layers/vit_adapter_layers/ops
-sh make.sh
-```
-
-### 3. CUDA architecture error
-
-Error:
-
-```text
-no kernel image is available for execution on the device
-```
-
-For RTX 4090 / 4090D:
-
-```bash
-export TORCH_CUDA_ARCH_LIST="8.9"
-```
-
-Then rebuild CUDA ops.
-
-### 4. xFormers not available
-
-This warning may appear when xFormers is not installed:
-
-```text
-xFormers not available
-```
-
-Install a version compatible with your PyTorch and CUDA:
-
-```bash
-pip install xformers==0.0.24 --index-url https://download.pytorch.org/whl/cu121
-```
+| Method | Backbone | mIoU | Sek | Fscd | OA | Checkpoint |
+|---|---|---:|---:|---:|---:|---|
+| ResNet50 + CG-Decoder | ResNet50 | XX.XX | XX.XX | XX.XX | XX.XX | [Download](YOUR_LANDSAT_RESNET50_CKPT_LINK) |
+| SwinV2-L + CG-Decoder | SwinV2-L | XX.XX | XX.XX | XX.XX | XX.XX | [Download](YOUR_LANDSAT_SWINV2L_CKPT_LINK) |
+| VMamba-B + CG-Decoder | VMamba-B | XX.XX | XX.XX | XX.XX | XX.XX | [Download](YOUR_LANDSAT_VMAMBAB_CKPT_LINK) |
+| **PerASCD** | PerA / DINOv2-G | **XX.XX** | **XX.XX** | **XX.XX** | **XX.XX** | [Download](YOUR_LANDSAT_PERASCD_CKPT_LINK) |
 
 ---
 
@@ -482,23 +286,8 @@ If this work is useful for your research, please consider citing:
   year    = {2026}
 }
 ```
-
 ---
 
-## Acknowledgements
-
-This project is built upon or inspired by:
-
-- PyTorch
-- timm
-- DINOv2
-- VMamba
-- Swin Transformer
-- ViT-Adapter
-- SECOND dataset
-- LandsatSCD dataset
-
----
 
 ## License
 
