@@ -286,9 +286,8 @@ changemask
 ---
 
 ## Legacy Implementation
-```text
 Paper results and the corresponding checkpoints are released with the legacy implementation. Please use the `legacy` branch to reproduce the reported results and load the paper checkpoints. The current main codebase is a refactored plug-and-play version and is not directly compatible with legacy checkpoints because the model wrapper and `state_dict` key names have changed.
-```
+
 
 ---
 
