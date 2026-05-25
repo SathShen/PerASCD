@@ -86,10 +86,10 @@ cd -
 
 We provide processed datasets with single-channel `uint8` index labels.
 
-| Dataset | Download |
+| Resource  | Download |
 |---|---|
-| SECOND | [Download](https://pan.baidu.com/s/1u1bN2miO__nbNR7cUy14uw?pwd=rhgj) |
-| LandsatSCD | [Download](https://pan.baidu.com/s/1zdbS4AHDpPTnWM5RqpVz4A?pwd=fkrn) |
+| HuggingFace | [Download](https://huggingface.co/datasets/SathShen/PerASCD-datasets) |
+| Baidu Disk | [Download](https://pan.baidu.com/s/1iw76eP3KSBy2jOP_ypfTNA?pwd=vt5z) |
 
 Expected directory structure:
 
