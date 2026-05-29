@@ -2,4 +2,4 @@
 
 This folder contains the legacy implementation used to reproduce the paper results and load the released paper checkpoints.
 
-The legacy code and checkpoints can be downloaded here: [Legacy Checkpoints](https://pan.baidu.com/s/1NsvHROyQDLSYMPN_X57iKw?pwd=rpb6).
+The legacy checkpoints can be downloaded here: [BaiduDisk](https://pan.baidu.com/s/1eKU6r38udZV8YGTpGbCpMQ?pwd=xbyc) or [Hugging Face](https://drive.google.com/file/d/1eKU6r38udZV8YGTpGbCpMQ/view?usp=sharing).
