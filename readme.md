@@ -64,7 +64,6 @@ python -m pip install -r requirements.txt
 ```
 
 The PerA environment uses PyTorch 2.7.1, CUDA 12.8, and torchvision 0.22.1.
-An existing environment that passes the model tests can also be used.
 Other encoders may require additional dependencies.
 
 ### PerA Runtime
@@ -138,7 +137,8 @@ CUDA_VISIBLE_DEVICES=0 python train.py \
 ```
 
 Training hyperparameters retain the defaults in `train.py`. Configuration uses command-line arguments.
-For PerA on SECOND, `input-size=448` configures the backbone's positional embeddings, while images and final predictions are 512 × 512.
+For PerA on SECOND, `input-size=448` configures PerA's positional embeddings; it does not resize
+the dataset images. SECOND images and the default output size are 512 × 512.
 
 ### Fine-Tune a Full Checkpoint
 
@@ -153,7 +153,7 @@ CUDA_VISIBLE_DEVICES=0 python train.py \
   --note pera_second_finetune
 ```
 
-This command uses the default training hyperparameters. Set `--lr` and `--epochs` explicitly if a different fine-tuning schedule is needed.
+Fine-tuning also uses the training defaults, including `--lr 0.1` and `--epochs 50`. Override them explicitly for a different schedule.
 
 ### Resume Training
 
@@ -170,6 +170,7 @@ CUDA_VISIBLE_DEVICES=0 python train.py \
 
 Keep the training settings consistent with the original run. `--epochs` specifies the total number of epochs, including those already completed.
 Use only one initialization option: `--pretrained-path`, `--finetune-path`, or `--load-path`.
+Use `--finetune-path` for the released SECOND weights; use `--load-path` for resuming a training checkpoint saved by the current script.
 
 ### Train with Other Backbones
 
@@ -217,20 +218,23 @@ CUDA_VISIBLE_DEVICES=0 python evaluate.py \
   --encoder pera \
   --data-name SECOND \
   --data-path /path/to/SECOND \
-  --split val \
-  --input-size 448 \
-  --output-size 512 \
-  --norm-profile pera \
-  --val-batch-size 1 \
   --load-path /path/to/perascd_second.pth \
-  --out-dir ./eval/SECOND \
-  --save-preds \
-  --gen-conf-matrix
+  --split val
 ```
 
-Use the same split and normalization as the reference result when comparing accuracy.
-Use `--split test` only if a corresponding `test/` directory is available.
-For ImageNet-pretrained encoders such as ResNet50, VMamba-B, or SwinV2-L, use `--norm-profile imagenet`.
+PerA, SECOND, input size 448, output size 512, and evaluation batch size 1 are the defaults.
+Normalization defaults to `auto`, which selects the PerA profile for this encoder.
+Keep `--split val`: the script otherwise defaults to `test`.
+When comparing accuracy, use the same dataset split and normalization as the reference result.
+
+Optional arguments:
+
+- `--save-preds`: save semantic predictions and binary change masks.
+- `--gen-conf-matrix`: include confusion matrices in the evaluation log.
+- `--out-dir ./eval/SECOND`: choose an output directory instead of the default `eval/SECOND/pera/<timestamp>/`.
+
+For other encoders, set `--encoder` and the required model settings explicitly.
+The default `auto` normalization selects the ImageNet profile for ResNet50, VMamba-B, and SwinV2-L.
 
 ### Evaluation Outputs
 
