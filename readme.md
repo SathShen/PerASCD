@@ -75,18 +75,12 @@ MSDA calls the repository's differentiable PyTorch implementation; Attention use
 PyTorch SDPA when xFormers is absent. No custom CUDA extension needs to be compiled.
 For a new installation, use a separate environment without xFormers. An existing
 environment that passes the model tests can be reused; no CUDA toolkit/compiler is needed.
-All ViT-Adapter components are consolidated in `models/pera_layers/vit_adapter.py`.
-Remove the obsolete `models/pera_layers/vit_adapter_layers/` directory after replacing that file.
-These requirements target PerA. Other encoders require their own extra dependencies.
 
 ### Existing SECOND checkpoint
 
-This version is based on commit `dfdcc1efae13767aaba042c2f3f71715a6be0df6`.
-PerA uses the fixed three-fusion-block architecture trained in the Docker deployment,
-without a refinement block or an architecture selector.
-The original training loop, default hyperparameters, data processing, and checkpoint
-filenames containing validation metrics are preserved. No additional configuration
-framework or YAML argument loader is introduced. The original `evaluate.py` is unchanged.
+Download the PerASCD checkpoint trained on SECOND from [Hugging Face](https://huggingface.co/SathShen/PerASCD-Checkpoint).
+Pass the downloaded checkpoint path to `--load-path` when running evaluation.
+
 
 ```bash
 CUDA_VISIBLE_DEVICES=1 python evaluate.py --encoder pera \
