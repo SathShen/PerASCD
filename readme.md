@@ -17,7 +17,7 @@
 ---
 
 ## News
-- `[26 Oct 2026]` Upload checkpoint (Fscd=66.59) to HuggingFace.
+- `[26 Oct 2026]` Upload Fscd=66.59 checkpoint to HuggingFace.
 - `[25 May 2026]` Code released.
 - `[14 Feb 2026]` Paper uploaded to arXiv.
 
