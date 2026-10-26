@@ -80,7 +80,7 @@ Processed datasets use single-channel `uint8` index labels.
 
 | Source | Download |
 |---|---|
-| Hugging Face | [PerASCD datasets](https://huggingface.co/datasets/SathShen/PerASCD-datasets) |
+| Hugging Face | [Download](https://huggingface.co/datasets/SathShen/PerASCD-datasets) |
 | Baidu Disk | [Download](https://pan.baidu.com/s/1iw76eP3KSBy2jOP_ypfTNA?pwd=vt5z) |
 
 Expected directory structure:
