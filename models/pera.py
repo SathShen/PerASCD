@@ -1,11 +1,9 @@
 import torch
+from collections import OrderedDict
 import torch.nn as nn
 
 from models.pera_layers.vit_adapter import DinoV2_ViTAdapter
 from .common import SCDNet
-
-
-DEFAULT_CKPT = "/data2/sht/Outputs/Backup/Pretrain/ViTGall22601_250221020940/Run2/autosave/pera_ViTGall22601_ep42_auto.params"
 
 
 class PerAEncoder(nn.Module):
@@ -43,7 +41,7 @@ class PerAEncoder(nn.Module):
         self.backbone.head = None
         self.backbone.mask_token = None
 
-        ckpt_path = pretrained_path or DEFAULT_CKPT
+        ckpt_path = pretrained_path
         if ckpt_path is not None:
             self.load_pretrained(ckpt_path)
 
@@ -60,7 +58,15 @@ class PerAEncoder(nn.Module):
             if k.startswith("teacher.backbone.")
         }
 
+        if not teacher_state:
+            raise ValueError("Expected teacher.backbone.* foundation weights; full weights use --finetune-path")
+        teacher_state = {k: v for k, v in teacher_state.items()
+                         if not k.startswith("head.") and k != "mask_token"}
         missing, unexpected = self.backbone.load_state_dict(teacher_state, strict=False)
+        adapter_keys = ("spm.", "interactions.", "up.", "norm1.", "norm2.", "norm3.", "norm4.")
+        bad = [k for k in missing if k != "level_embed" and not k.startswith(adapter_keys)]
+        if bad or unexpected:
+            raise ValueError(f"Foundation checkpoint mismatch: missing={bad}, unexpected={unexpected}")
         print(f"PerA DINOv2-G checkpoint loaded: {pretrained_path}")
         print(f"Missing keys: {len(missing)}, Unexpected keys: {len(unexpected)}")
 
@@ -71,6 +77,29 @@ class PerAEncoder(nn.Module):
 
     def forward(self, x):
         return self.backbone(x)
+
+
+class PerASCD(SCDNet):
+    """Fixed three-block model; accept parameter names from the existing Docker run."""
+    def load_state_dict(self, state_dict, strict=True, assign=False):
+        if not strict:
+            raise ValueError("PerASCD requires strict checkpoint loading")
+        prefixes = (("backbone.", "encoder.backbone."),
+                    ("decoder.blocks.", "decoder.fusion_blocks."),
+                    ("classifierA.", "classifier_a."),
+                    ("classifierB.", "classifier_b."),
+                    ("classifierCD.", "classifier_cd."))
+        mapped = OrderedDict()
+        for key, value in state_dict.items():
+            key = key.removeprefix("module.")
+            for old, new in prefixes:
+                if key.startswith(old):
+                    key = new + key[len(old):]
+                    break
+            if key in mapped:
+                raise ValueError("Checkpoint key collision: " + key)
+            mapped[key] = value
+        return super().load_state_dict(mapped, strict=True, assign=assign)
 
 
 def build_model(
@@ -88,7 +117,7 @@ def build_model(
         freeze_backbone=freeze_backbone,
     )
 
-    return SCDNet(
+    return PerASCD(
         encoder=encoder,
         in_channel_list=[1024, 1024, 1024, 1024],
         num_classes=num_classes,
@@ -96,5 +125,5 @@ def build_model(
         drop_rate=drop_rate,
         out_channels=128,
         channel_last=False,
-        use_refinement_block=True,
+        use_refinement_block=False,
     )

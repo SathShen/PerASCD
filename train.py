@@ -11,6 +11,8 @@ from torch import optim
 from torch.cuda.amp import autocast, GradScaler
 from torch.utils.data import DataLoader
 from tqdm import tqdm
+from torch.utils.tensorboard import SummaryWriter
+import atexit
 
 from utils.dataset import SCDDataset, get_dataset_spec
 from utils.loss import CrossEntropyLoss2d, weighted_BCE_logits, SoftSemanticConsistency
@@ -29,7 +31,7 @@ def parse_args():
     parser = argparse.ArgumentParser(description="Unified Semantic Change Detection training script.")
 
     # Model / Encoder
-    parser.add_argument("--encoder", type=str, default="PerA", choices=list(ENCODER_REGISTRY.keys()), help="Encoder backbone name.")
+    parser.add_argument("--encoder", type=str, default="pera", choices=list(ENCODER_REGISTRY.keys()), help="Encoder backbone name.")
     parser.add_argument("--pretrained-path", type=str, default=None, help="Path to pretrained backbone weights.")
     parser.add_argument("--freeze-backbone", action="store_true", help="Freeze encoder backbone during training.")
 
@@ -59,6 +61,7 @@ def parse_args():
     parser.add_argument("--amp-dtype", type=str, default="fp16", choices=["fp16", "bf16", "fp32", "none"], help="AMP mixed precision type.")
 
     # Resume / Logging
+    parser.add_argument("--finetune-path", default=None, help="Full model weights only; fresh optimizer and epoch count.")
     parser.add_argument("--load-path", type=str, default=None, help="Checkpoint path for resuming training.")
     parser.add_argument("--log-root", type=str, default="./logs", help="Root directory for logs and checkpoints.")
     parser.add_argument("--note", type=str, default="", help="Extra note appended to log directory name.")
@@ -118,6 +121,9 @@ def save_ckpt(path, epoch, net, optimizer, best_fscd, sek, miou):
 
 def resume_ckpt(net, optimizer, path):
     checkpoint = torch.load(path, weights_only=False)
+    # Docker and this repository register parameters in a different order.
+    if any(k.removeprefix("module.").startswith("backbone.") for k in checkpoint["model"]):
+        raise ValueError("Old Docker optimizer order differs; use --finetune-path for model-only initialization")
     net.load_state_dict(checkpoint["model"], strict=True)
     optimizer.load_state_dict(checkpoint["optimizer"])
     print(f"Checkpoint loaded from {path}")
@@ -282,6 +288,8 @@ def validate(args, val_loader, net, criterion):
 
 def main():
     args = parse_args()
+    if sum(bool(p) for p in (args.pretrained_path, args.load_path, args.finetune_path)) > 1:
+        raise ValueError("Specify only one of --pretrained-path, --load-path and --finetune-path")
     print("=" * 80)
     print("Training Arguments:")
     for k, v in vars(args).items():
@@ -296,6 +304,10 @@ def main():
     args.num_classes = spec.num_classes
 
     net = build_model(args).cuda()
+    if args.finetune_path:
+        checkpoint = torch.load(args.finetune_path, map_location="cpu", weights_only=False)
+        net.load_state_dict(checkpoint.get("model", checkpoint), strict=True)
+        del checkpoint
     print(f"Network {args.encoder} is initialized.")
     print("Number of network parameters: %.1fM" % (sum(p.numel() for p in net.parameters()) / 1e6))
     print("Number of trainable parameters: %.1fM" % (sum(p.numel() for p in net.parameters() if p.requires_grad) / 1e6))
@@ -323,12 +335,21 @@ def main():
     best_acc = 0.0
     best_loss = 1.0
 
+    writer = SummaryWriter(os.path.join(log_dir, "tensorboard"))
+    atexit.register(writer.close)
     for epoch in range(curr_epoch, args.epochs):
         torch.cuda.empty_cache()
         seg_loss, bn_loss, sc_loss = train_one_epoch(
             args, train_loader, net, criterion, criterion_sc, optimizer, scaler, epoch, all_iters
         )
         fscd, miou, sek, acc, val_loss = validate(args, val_loader, net, criterion)
+
+        for name, value in {"train/seg": seg_loss, "train/bn": bn_loss, "train/sc": sc_loss,
+                            "val/loss": val_loss, "val/Fscd": fscd, "val/mIoU": miou,
+                            "val/Sek": sek, "val/accuracy": acc,
+                            "lr": optimizer.param_groups[0]["lr"]}.items():
+            writer.add_scalar(name, float(value), epoch)
+        writer.flush()
 
         if fscd > best_fscd:
             best_fscd = fscd
@@ -341,6 +362,7 @@ def main():
               f"Train seg {seg_loss:.4f} bn {bn_loss:.4f} sc {sc_loss:.4f} | "
               f"Best Val Fscd {best_fscd * 100:.2f} acc {best_acc * 100:.2f} loss {best_loss:.4f}")
 
+    writer.close()
     print("Training finished.")
 
 

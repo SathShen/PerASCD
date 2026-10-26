@@ -6,8 +6,8 @@
 
 <p align="center">
   <a href="https://arxiv.org/abs/2602.13780"><img src="https://img.shields.io/badge/Paper-arXiv-red?logo=adobeacrobatreader&logoColor=white"></a>
-  <a href="#"><img src="https://img.shields.io/badge/PyTorch-2.2+-ee4c2c?logo=pytorch&logoColor=white"></a>
-  <a href="#"><img src="https://img.shields.io/badge/CUDA-12.1-76b900?logo=nvidia&logoColor=white"></a>
+  <a href="#"><img src="https://img.shields.io/badge/PyTorch-2.7.1-ee4c2c?logo=pytorch&logoColor=white"></a>
+  <a href="#"><img src="https://img.shields.io/badge/CUDA-12.8-76b900?logo=nvidia&logoColor=white"></a>
   <a href="#"><img src="https://img.shields.io/badge/Task-Semantic%20Change%20Detection-blue"></a>
   <a href="#"><img src="https://img.shields.io/badge/License-MIT-green"></a>
 </p>
@@ -68,17 +68,47 @@ conda activate perascd
 pip install -r requirements.txt
 ```
 
-### 3. Build custom CUDA ops for PerA / ViT-Adapter
-This step is only required if you want to use the `PerA` encoder.  
-If you only use other backbones such as `ResNet50`, `VMamba-B`, or `SwinV2-L`, you can skip this step.
+### 3. PerA runtime
 
-Build `MultiScaleDeformableAttention`:
+This version uses PyTorch 2.7.1 + CUDA 12.8 and torchvision 0.22.1.
+MSDA calls the repository's differentiable PyTorch implementation; Attention uses
+PyTorch SDPA when xFormers is absent. **Do not run `ops/make.sh`.**
+Create a fresh environment without xFormers; no CUDA toolkit/compiler is needed.
+Keep `vit_adapter_layers`: it contains model layers, not just the CUDA extension.
+These requirements target PerA. Other encoders require their own extra dependencies.
+
+### Existing SECOND checkpoint
+
+本版基于提交 `dfdcc1efae13767aaba042c2f3f71715a6be0df6`，仅替换 7 个已有文件。
+PerA 固定为此次 Docker 训练的三融合块结构，无 refinement，无结构选择参数。
+保留原训练循环、默认超参数、数据处理和带指标的权重文件名；没有新增 tools、YAML 或工具模块。
+请从未覆盖前几版补丁的原仓库开始，按包内路径覆盖；原 evaluate.py 无需修改。
 
 ```bash
-cd models/pera_layers/vit_adapter_layers/ops
-sh make.sh
-cd -
+CUDA_VISIBLE_DEVICES=1 python evaluate.py --encoder pera \
+  --data-name SECOND --data-path /data2/sht/Datasets/SECONDbi --split val \
+  --load-path /data2/sht/Weights/perascd-second-20261023-192039/checkpoints/best.pth \
+  --input-size 448 --output-size 512 --save-preds
 ```
+
+模型加载时只映射 Docker 参数名，仍执行 strict=True；多层、缺层和尺寸不符直接报错。
+完整权重加载不再要求硬编码的基础权重路径。基础预训练使用原来的 `--pretrained-path`。
+从 Docker best.pth 微调使用新增的 `--finetune-path`，优化器、轮数重新开始；
+它不能用 `--load-path` 恢复优化器，因为参数注册顺序不同，代码会报错。
+本版生成的 checkpoint 仍使用原仓库的 `--load-path` 续训。
+
+```bash
+CUDA_VISIBLE_DEVICES=1 python train.py --encoder pera \
+  --data-name SECOND --data-path /data2/sht/Datasets/SECONDbi \
+  --pretrained-path /data2/sht/Weights/ViTGall22601_250221020940/pera_ViTGall22601_ep42_auto.params \
+  --log-root /data2/sht/Weights/pera-runs
+```
+
+TensorBoard 仅在原 train.py 中加入每轮损失、验证指标和学习率记录：
+`tensorboard --logdir /data2/sht/Weights/pera-runs`。验证指标为 0～1 原始数值。
+原版只保存验证提升时的带指标文件名，不新增 best/last 保存规则，不恢复旧日志。
+不新增 YAML 参数读取；仍用原命令行。新权重参数名为仓库格式，回传旧 Docker 服务需另行转换。
+Attention 的无 xFormers 路径不再生成 self.attn 可视化缓存。
 
 ---
 
@@ -286,7 +316,7 @@ changemask
 ---
 
 ## Legacy Implementation
-Paper results and the corresponding checkpoints are released with the legacy implementation. Please use the `legacy` branch to reproduce the reported results and load the paper checkpoints. The current main codebase is a refactored plug-and-play version and is not directly compatible with legacy checkpoints because the model wrapper and `state_dict` key names have changed.
+Paper results and the corresponding checkpoints are released with the legacy implementation. Please use the `legacy` branch to reproduce the reported results and load the paper checkpoints. This local patch supports the three-block model trained in the Docker deployment. It does not support other legacy architectures or the additional refinement block.
 
 
 ---
