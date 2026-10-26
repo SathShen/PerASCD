@@ -170,7 +170,6 @@ CUDA_VISIBLE_DEVICES=0 python train.py \
 
 Keep the training settings consistent with the original run. `--epochs` specifies the total number of epochs, including those already completed.
 Use only one initialization option: `--pretrained-path`, `--finetune-path`, or `--load-path`.
-Old Docker checkpoints must use `--finetune-path` for training because their optimizer parameter order differs.
 
 ### Train with Other Backbones
 
