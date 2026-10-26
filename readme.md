@@ -326,17 +326,7 @@ For example, if your custom encoder is pretrained with ImageNet statistics, use:
 --norm-profile imagenet
 ```
 
-## Checkpoint Compatibility
-
-The current PerA model uses three fusion blocks without an additional refinement block.
-Docker checkpoint parameter names are mapped to the repository names and loaded with `strict=True`.
-Missing layers, extra layers, and tensor shape mismatches raise errors.
-
-- Old Docker weights can be used for evaluation or model-only fine-tuning. Their optimizer state cannot be restored with `--load-path`.
-- New checkpoints use the repository parameter names and require conversion before use with the unchanged Docker service.
-- The SDPA attention path does not retain the `self.attn` visualization cache.
-
-### Legacy Implementation
+## Legacy Implementation
 
 Paper results and the corresponding checkpoints were released with the legacy implementation.
 Use the `legacy` branch to reproduce those results with the matching model code.
