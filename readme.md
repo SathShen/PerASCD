@@ -15,7 +15,7 @@
 > Official implementation of **PerASCD**, a semantic change detection framework with a plug-and-play encoder interface and a **Cascade Gated Decoder (CG-Decoder)**. See paper for more details: [Foundation Model-Driven Semantic Change Detection in Remote Sensing Imagery](https://arxiv.org/abs/2602.13780).
 
 ## News
-
+- `[30 Oct 2026]`  Our paper was accepted for publication in IEEE Journal of Selected Topics in Applied Earth Observations and Remote Sensing (JSTARS)!.
 - `[26 Oct 2026]` Released the SECOND checkpoint with Fscd = 66.59 on [Hugging Face](https://huggingface.co/SathShen/PerASCD-Checkpoint).
 - `[25 May 2026]` Code released.
 - `[14 Feb 2026]` Paper uploaded to arXiv.
