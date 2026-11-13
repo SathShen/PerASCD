@@ -12,7 +12,7 @@
   <a href="#"><img src="https://img.shields.io/badge/License-MIT-green"></a>
 </p>
 
-> Official implementation of **PerASCD**, a semantic change detection framework with a plug-and-play encoder interface and a **Cascade Gated Decoder (CG-Decoder)**. See paper for more details: [Foundation Model-Driven Semantic Change Detection in Remote Sensing Imagery](https://arxiv.org/abs/2602.13780).
+> Official implementation of **PerASCD**, a semantic change detection framework with a plug-and-play encoder interface and a **Cascade Gated Decoder (CG-Decoder)**. See paper for more details: [Foundation Model-Driven Semantic Change Detection in Remote Sensing Imagery](https://ieeexplore.ieee.org/document/11774836).
 
 ## News
 - `[30 Oct 2026]`  Our paper was accepted for publication in IEEE Journal of Selected Topics in Applied Earth Observations and Remote Sensing (JSTARS)!.
